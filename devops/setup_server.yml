@@ -1,15 +1,18 @@
 ---
 
-- hosts: webservers
-  user: ubuntu
+- hosts: localhost
+  user: vagrant
   sudo: True
+
+  roles:
+      - role: craigmj.mariadb10
 
   tasks:
     - name: add nginx ppa
       action: apt_repository repo=ppa:nginx/stable state=present
 
     - name: install common packages needed for python application development
-      action: apt pkg=$item state=installed
+      action: apt pkg={{ item }} state=installed
       with_items:
         - libpq-dev
         - libmysqlclient-dev
@@ -19,7 +22,10 @@
         - libfreetype6
         - libfreetype6-dev
         - zlib1g-dev
-        - mysql-client
+
+    - name: install python packages needed for python application development
+      action: apt pkg={{ item }} state=installed
+      with_items:
         - python-dev
         - python-setuptools
         - python-imaging
@@ -28,26 +34,33 @@
         - git-core
         - nginx
 
+    - name: install nginx and mysql client
+      action: apt pkg={{ item }} state=installed
+      with_items:
+        - mysql-client
+        - nginx
+
     - name: install pip
       action: easy_install name=pip
 
     - name: install various libraries with pip
-      action: pip name=$item state=present
+      action: pip name={{ item }} state=present
       with_items:
         - virtualenv
         - supervisor
         - uwsgi
+        - yolk
 
-    - name: symlink imaging library files
+    - name: symlink imaging library files (libfreetype)
       action: file src=/usr/lib/x86_64-linux-gnu/libfreetype.so dest=/usr/lib/libfreetype.so state=link
 
-    - name: symlink imaging library files
+    - name: symlink imaging library files (libz)
       action: file src=/usr/lib/x86_64-linux-gnu/libz.so dest=/usr/lib/libz.so state=link
 
-    - name: symlink imaging library files
+    - name: symlink imaging library files (libjpeg)
       action: file src=/usr/lib/x86_64-linux-gnu/libjpeg.so.62 dest=/usr/lib/x86_64-linux-gnu/libjpeg.so state=link
 
-    - name: symlink imaging library files
+    - name: symlink imaging library files (libjpeg)
       action: file src=/usr/lib/x86_64-linux-gnu/libjpeg.so dest=/usr/lib/libjpeg.so state=link
 
     - name: remove default nginx site
@@ -69,4 +82,6 @@
       action: service name=supervisord state=started enabled=yes
 
     - name: create webapps directory
-      action: file dest=/srv/webapps state=directory
+      action: file dest=/var/www/envs state=directory
+      
+      
