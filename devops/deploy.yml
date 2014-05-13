@@ -3,25 +3,46 @@
 - hosts: localhost
   user: vagrant
   sudo: True
-
+  
   vars:
     app_name: hello_flask
-    repo_url: https://github.com/douglasgoodwin/ansible-tutorial.git
-    repo_remote: origin
-    repo_version: master
+    repo_url: git@git.lbox.com:douglas.goodwin/mullen.git
+    key_file: ~/.ssh/id_dsa
     webapps_dir: /var/www/envs
+    accept_hostkey: yes
     wsgi_file: wsgi.py
     wsgi_callable: app
+    version: HEAD
+    remote: origin
+    accept_hostkey: yes
+
+
+  # roles:
+  #     # you'll need to run this first: ansible-galaxy install laggyluke.add-ssh-keys-from-github
+  #     - role: laggyluke.add-ssh-keys-from-github
 
   tasks:
-    - name: ensure log directory
-      action: file dest={{webapps_dir}}/{{app_name}}//log state=directory
 
+    - name: ensure web app and log directories
+      action: file dest={{webapps_dir}}/{{app_name}}/log state=directory
+
+    - name: install git
+      action: apt pkg={{ item }} state=installed
+      with_items:
+        - git-core
+
+    - name: ensure known hosts
+      shell: touch ~{{ansible_ssh_user}}/.ssh/known_hosts
+
+    - name: ensure github.com in known host
+      shell: ssh-keyscan -H git.lbox.com > /etc/ssh/ssh_known_hosts
+       
     - name: deploy code from repository
-      action: git repo=$repo_url dest={{webapps_dir}/{{app_name}}//src remote=$repo_remote version=$repo_version
-
-    - name: install dependencies into virtualenv
-      action: pip requirements={{webapps_dir}/{{app_name}/src/requirements.txt virtualenv={{webapps_dir}}/{{app_name}}//venv state=present
+      action: git repo={{repo_url}} 
+          dest={{webapps_dir}}
+          remote={{remote}}
+          version={{version}}
+          accept_hostkey={{accept_hostkey}}
 
     - name: create supervisor program config
       action: template src=templates/supervisor.ini dest=/etc/supervisor/{{app_name}}/.ini
